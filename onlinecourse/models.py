@@ -103,6 +103,7 @@ class Enrollment(models.Model):
     # Has a grade point for each question
     # Has question content
     # Other fields and methods you would like to design
+
 class Question(models.Model):
     # Foreign key to lesson
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)

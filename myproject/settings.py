@@ -28,7 +28,7 @@ DEBUG = True
 
 # <HINT> add your cloud host here
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['localhost', 'liveon.eu-de.mybluemix.net']
+ALLOWED_HOSTS = ['127.0.0.1', 'liveon.eu-de.mybluemix.net']
 
 
 # Application definition

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
-from .models import Course, Enrollment
+from .models import Course, Enrollment, Question, Choice
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -110,47 +110,21 @@ def enroll(request, course_id):
          # Collect the selected choices from exam form
          # Add each selected choice object to the submission object
          # Redirect to show_exam_result with the submission id
+
 def submit(request, course_id):
-    submitted_anwsers  = extract_answers(request)
+    course = get_object_or_404(Course, pk=course_id)
+    user = request.user
 
-    dummy_lesson = Lesson.objects.filter(course_id = course_id)
-    lesson_dummy_id = []
+    enrollement = Enrollment.objects.get(user=user, course=course)
+    submission = Submission.objects.create(enrollment=enrollement)
+    
+    submitted_answers = extract_answers(request)
+    
+    submission.choices.set(submitted_answers)
+    submission.save()
 
-    for l in dummy_lesson:
-        lesson_dummy_id.append(l.id)
-    # print("Lesson Id ===============> ",lesson_dummy_id)
-    # Create any data and add it to the context
-    question_list = Question.objects.filter(lesson_id__in = lesson_dummy_id)
-    total_marks = 0
-    marks_obtained = 0
-
-    for question in question_list:
-        print("Question ===========>" + question.content + "======> marks " + str(question.grade))
-        correct_ans = True
-        for choice in question.choice_set.all():
-            if (choice.id in submitted_anwsers) and (not choice.is_correct):
-                correct_ans = False
-                break
-        if Question.is_get_score(question, submitted_anwsers) and correct_ans:
-            marks_obtained+=question.grade
-
-        total_marks+=question.grade
-
-    percent_obtained = int(ceil((marks_obtained/total_marks)*100))
-    # return HttpResponse("Success" + str(percent_obatained), content_type='application/json')
-    # request.body["percent_obatained"] = percent_obatained
-    submission_id = uuid.uuid1()
-    print(submission_id)
-    context = {}
-    context['course_id'] = course_id
-    context['percent_obtained'] = percent_obtained
-    context['submission_id'] = submission_id
-    context['question_list'] = question_list
-    context['submitted_anwsers'] = submitted_anwsers
-    print("Submitted >>>>>>>>>>>>>>>>>>>>>>>>>>", submitted_anwsers)
-    # HttpResponseRedirect(reverse(viewname='onlinecourse:course_details', args=(course_id,percent_obtained,submission_id)))
-    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
-
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:show_exam_result', args=(course.id, submission.id,)))
+    
 # <HINT> A example method to collect the selected choices from the exam form from the request object
 def extract_answers(request):
     submitted_anwsers = []
@@ -180,9 +154,23 @@ def extract_answers(request):
         # Get the selected choice ids from the submission record
         # For each selected choice, check if it is a correct answer or not
         # Calculate the total score
-# def show_exam_result(request, course_id, submission_id):
-#     context = {}
-#     context['course_id'] = course_id
-#     context['percent_obtained'] = request.body.percent_obatained
-#     return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
+
+def show_exam_result(request, course_id, submission_id):
+    course = get_object_or_404(Course, pk=course_id)
+    submission = get_object_or_404(Submission, pk=submission_id)
+
+    context = {}
+    choices = submission.choices
+
+    score = 0
+
+    # For each selected choice, check if it is a correct answer or not
+    for choice in choices:
+        if choice.is_correct:
+            score = score + choice.question.grade
+    
+    context['course'] = course
+    context['grade'] = score
+
+    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
 
